@@ -6,6 +6,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 	public $current_date_gmt;
 	public $created_post_ids;
 	public $admin;
+	public $subscriber;
 
 	public function setUp() {
 		parent::setUp();
@@ -16,6 +17,9 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 		$this->admin            = $this->factory()->user->create( [
 			'role' => 'administrator',
 		] );
+		$this->subscriber = $this->factory()->user->create([
+			'role' => 'subscriber'
+		]);
 		$this->created_post_ids = $this->create_posts();
 
 		$this->app_context = new \WPGraphQL\AppContext();
@@ -98,7 +102,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 
 	public function postsQuery( $variables ) {
 
-		$query = 'query postsQuery($first:Int $last:Int $after:String $before:String $where:RootPostsQueryArgs){
+		$query = 'query postsQuery($first:Int $last:Int $after:String $before:String $where:RootQueryToPostConnectionWhereArgs ){
 			posts( first:$first last:$last after:$after before:$before where:$where ) {
 				pageInfo {
 					hasNextPage
@@ -113,6 +117,8 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 						postId
 						title
 						date
+						content
+						excerpt
 					}
 				}
 				nodes {
@@ -135,6 +141,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 			'first' => 1,
 		];
 		$results   = $this->postsQuery( $variables );
+
 
 		/**
 		 * Let's query the first post in our data set so we can test against it
@@ -379,7 +386,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 			'authorNotIn' => [ 4, 5, 6 ],
 		];
 
-		$actual = \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
+		$actual = \WPGraphQL\Data\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
 
 		/**
 		 * Make sure the returned values are equal to mock args
@@ -403,7 +410,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 			'categoryIn'   => [ 4, 5, 6 ],
 		];
 
-		$actual = \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
+		$actual = \WPGraphQL\Data\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
 
 		/**
 		 * Make sure the returned values are equal to mock args
@@ -426,9 +433,10 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 			'tagIds'     => [ 1, 2, 3 ],
 			'tagSlugAnd' => [ 4, 5, 6 ],
 			'tagSlugIn'  => [ 6, 7, 8 ],
+			'tagIn'      => [ 9, 8, 7 ]
 		];
 
-		$actual = \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
+		$actual = \WPGraphQL\Data\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
 
 		/**
 		 * Make sure the returned values are equal to mock args
@@ -437,6 +445,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 		$this->assertEquals( [ 1, 2, 3 ], $actual['tag__and'] );
 		$this->assertEquals( [ 4, 5, 6 ], $actual['tag_slug__and'] );
 		$this->assertEquals( [ 6, 7, 8 ], $actual['tag_slug__in'] );
+		$this->assertEquals( [ 9, 8, 7 ], $actual['tag__in'] );
 
 		/**
 		 * Make sure the query didn't return these array values
@@ -445,6 +454,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 		$this->assertArrayNotHasKey( 'tagIds', $actual );
 		$this->assertArrayNotHasKey( 'tagSlugAnd', $actual );
 		$this->assertArrayNotHasKey( 'tagSlugIn', $actual );
+		$this->assertArrayNotHasKey( 'tagIn', $actual );
 	}
 
 	public function testSanitizeInputFieldsSearchArgs() {
@@ -453,7 +463,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 			'id'     => 1,
 		];
 
-		$actual = \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
+		$actual = \WPGraphQL\Data\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
 
 		/**
 		 * Make sure the returned values are equal to mock args
@@ -478,7 +488,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 			'nameIn'      => [ 'testPost1', 'testPost2', 'testPost3' ],
 		];
 
-		$actual = \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
+		$actual = \WPGraphQL\Data\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
 
 		/**
 		 * Make sure the returned values are equal to mock args
@@ -515,7 +525,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 			),
 		];
 
-		$actual = \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
+		$actual = \WPGraphQL\Data\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
 
 		/**
 		 * Make sure the returned values are equal to mock args
@@ -547,7 +557,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 			'stati'      =>  [ 'publish', 'private' ],
 		];
 
-		$actual = \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
+		$actual = \WPGraphQL\Data\PostObjectConnectionResolver::sanitize_input_fields( $mock_args, null, [], $this->app_context, $this->app_info );
 
 		/**
 		 * Make sure the returned values are equal to mock args
@@ -589,7 +599,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 		/**
 		 * New page
 		 */
-		$actual = new \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver( 'page' );
+		$actual = new \WPGraphQL\Data\PostObjectConnectionResolver( 'page' );
 
 		$actual = $actual::get_query_args( $source, $mock_args, $this->app_context, $this->app_info );
 
@@ -652,7 +662,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 		/**
 		 * New post type attachment
 		 */
-		$actual = new \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver( $post_type );
+		$actual = new \WPGraphQL\Data\PostObjectConnectionResolver( $post_type );
 
 		$actual = $actual->get_query_args( $source, $mock_args, $this->app_context, $this->app_info );
 
@@ -679,7 +689,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 
 		$mock_args = array();
 
-		$actual = \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver::get_query_args( $source, $mock_args, $this->app_context, $this->app_info );
+		$actual = \WPGraphQL\Data\PostObjectConnectionResolver::get_query_args( $source, $mock_args, $this->app_context, $this->app_info );
 
 		/**
 		 * Make sure that post type is equals to post
@@ -700,7 +710,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 
 		$mock_args = array();
 
-		$actual = \WPGraphQL\Type\PostObject\Connection\PostObjectConnectionResolver::get_query_args( $source, $mock_args, $this->app_context, $this->app_info );
+		$actual = \WPGraphQL\Data\PostObjectConnectionResolver::get_query_args( $source, $mock_args, $this->app_context, $this->app_info );
 
 		/**
 		 * Make sure the author is equal to the user previously created
@@ -709,4 +719,35 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 
 	}
 
+	/**
+	 * Test to assert that the global post object is being set correctly
+	 */
+	public function testPostExcerptsAreDifferent() {
+
+		$post_1_args = [
+			'post_content' => 'Post content 1',
+			'post_excerpt' => 'Post excerpt 1',
+		];
+
+		$post_2_args = [
+			'post_content' => 'Post content 2',
+			'post_excerpt' => 'Post excerpt 2',
+		];
+
+		$post_1_id = $this->createPostObject( $post_1_args );
+		$post_2_id = $this->createPostObject( $post_2_args );
+
+		$request = $this->postsQuery( [ 'where' => [ 'in' => [ $post_1_id, $post_2_id ] ] ] );
+
+		$this->assertNotEmpty( $request );
+		$this->assertArrayNotHasKey( 'errors', $request );
+
+		$edges = $request['data']['posts']['edges'];
+		$this->assertNotEmpty( $edges );
+
+		$this->assertNotEquals( $edges[0]['node']['excerpt'], $edges[1]['node']['excerpt'] );
+		$this->assertNotEquals( $edges[0]['node']['content'], $edges[1]['node']['content'] );
+
+	}
+	
 }
