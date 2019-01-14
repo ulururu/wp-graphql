@@ -1,14 +1,13 @@
-![Logo](https://d2ffutrenqvap3.cloudfront.net/items/1i0F192I0j3F042t3S3R/logo-250.png)
+![Logo](./img/logo.png)
 
 # WPGraphQL 
 
-<a href="https://www.wpgraphql.com" target="_blank">Website</a> • <a href="https://wpgraphql.com/docs/getting-started/about/" target="_blank">Docs</a> • <a href="https://wp-graphql.github.io/wp-graphql-api-docs/" target="_blank">ApiGen Code Docs</a> • <a href="https://wpgql-slack.herokuapp.com/" target="_blank">Slack</a>
+<a href="https://www.wpgraphql.com" target="_blank">Website</a> • <a href="https://wpgraphql.com/docs/getting-started/about/" target="_blank">Docs</a> • <a href="https://wpgql-slack.herokuapp.com/" target="_blank">Slack</a>
 
 GraphQL API for WordPress.
 
 [![Build Status](https://travis-ci.org/wp-graphql/wp-graphql.svg?branch=master)](https://travis-ci.org/wp-graphql/wp-graphql)
-[![Coverage Status](https://coveralls.io/repos/github/wp-graphql/wp-graphql/badge.svg?branch=master)](https://coveralls.io/github/wp-graphql/wp-graphql?branch=master)
-
+[![codecov](https://codecov.io/gh/wp-graphql/wp-graphql/branch/master/graph/badge.svg)](https://codecov.io/gh/wp-graphql/wp-graphql)
 ------
 
 ## Quick Install
@@ -96,7 +95,7 @@ For example:
 
 `bin/install-wp-tests.sh wpgraphql_test root password 127.0.0.1 latest`
 
-DEBUGGING: If you have run this command before in another branch you may already have a local copy of WordPress downloaded in your `/private/tmp` directory. 
+*DEBUGGING*: If you have run this command before in another branch you may already have a local copy of WordPress downloaded in your `/private/tmp` directory. 
 If this is the case, please remove it and then run the install script again. Without removing this you may receive an error when running phpunit.
 
 #### Local Environment Configuration for Codeception Tests
@@ -126,64 +125,109 @@ Perhaps someone who's more of a Composer expert could lend some advise?:
     - You can specify which tests to run like: 
         - `vendor/bin/codecept run wpunit`
         - `vendor/bin/codecept run functional`
-        - `vendor/bin/codecept run unit`
         - `vendor/bin/codecept run acceptance`
+    - If you're working on a class, or with a specific test, you can run that class/test with:
+        - `vendor/bin/codecept run tests/wpunit/NodesTest.php`
+        - `vendor/bin/codecept run tests/wpunit/NodesTest.php:testPluginNodeQuery`
 
 
-### Testing in Docker
+### Using Docker
+Docker can be used to run tests or a local application instance in an isolated environment. It can also take care of most
+of the set up and configuration tasks performed by a developer.   
 
-A `docker-compose` file in the root of this repo provides all of the testing prerequisites, allowing you to run
-tests in isolation without installing anything locally (besides Docker).
+1. Verify [Docker CE](https://www.docker.com/community-edition) is installed:
+   ```
+   sudo docker --version
+   ```
+   
+1. Verify [Docker Compose](https://docs.docker.com/compose/install/) is installed:
+   ```
+   sudo docker-compose --version
+   ```
+1. (Optional, but handy) How to use Docker without having to type, `sudo`.   
+   * https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user
+   
+#### Running tests with Docker
 
-Install dependencies using Composer. Note the `--ignore-platform-reqs` which skips the checks for PHP extensions
-inside the barebones Docker container.
+##### For developers
+You'll need two terminal windows for this. The first window is to start the Docker containers needed for running tests. The
+second window is where you'll log into one of the running Docker containers (which will have OS dependencies already installed) and run 
+your tests as you make code changes.
 
-```
-docker run --rm -v $(pwd):/app composer install --ignore-platform-reqs
-```
-
-Now you're ready to start the Docker containers: a PHP container to hold the code under test, a PHP/Apache
-container to serve WordPress, and a MariaDB container.
-
-```
-docker-compose build
-docker-compose up -d
-```
-
-Your stack is starting! If this is your first time running that command, it will take a few minutes to download the
-referenced Docker images. Note that it takes about 15-30 seconds after this process completes for MariaDB to be
-ready to accept connections, so you'll need to wait that long before running the next command.
-
-Now we install the WordPress testing suite inside the container, link the local codebase inside it, and activate it
-as a plugin. Note that we are skipping database creation (handled by our `docker-compose` file). The WordPress
-version you pass here should match what is specified in `docker-compose.yml`.
-
-```
-docker-compose run --rm tests ./bin/install-wp-tests.sh ignored root testing mysql_test 4.9.4 true
-```
-
-You now have a stable testing environment. The WPGraphQL codebase is mapped inside your containers and any changes
-you make will be reflected almost immediately. We use Codeception Environments (`--env`) to point tests to our
-database container instead of `127.0.0.1`. Run your tests and repeat as necessary, e.g.:
-
-```
-docker-compose run --rm tests ./vendor/bin/codecept run acceptance --env docker
-docker-compose run --rm tests ./vendor/bin/codecept run functional --env docker
-docker-compose run --rm tests ./vendor/bin/codecept run wpunit --env docker
-```
-
-Code coverage for `wpunit` tests can be generated using `phpdbg` (note that Codeception currently segfaults under 
-phpdbg and PHP 7.2):
-
-```
-docker-compose run --rm tests phpdbg -qrr ./vendor/bin/codecept run wpunit --env docker --coverage --coverage-xml
-```
-
-If you need to test against a different WordPress version, you will need to destroy your environemnt, update
-`docker-compose.yml` and `bin/Dockerfile` to point to the desired version, then recreate your environment.
+1. In the first terminal window, start up a pristine Docker testing environment by running this command:
+   ```
+   ./run-docker-test-environment.sh
+   ```
+   This step will take several minutes the first time it's run because it needs to install OS dependencies. This work will
+   be cached so you won't have to wait as long the next time you run it. You are ready to go to the next step when you
+   see output similar to the following:
+   ```
+   wpgraphql.test_1  | [Tue Oct 30 15:04:33.917067 2018] [core:notice] [pid 1] AH00094: Command line: 'apache2 -D FOREGROUND'
+   
+   ```
+1. In the second terminal window, access the Docker container shell from which you can run tests:
+   ```
+   ./run-docker-shell.sh 'wp-graphql'
+   ```
+   At this point some extra test initialization will be done. You should eventually see a prompt like this:
+   ```
+   root@bb953c1da8d7:/tester-shell-dir
+   ```   
+1. Now you are ready to work in your IDE and test your changes by running any of the following commands in the second
+terminal window):
+   ```
+   run-codeception.sh run 'wpunit' --env docker
+   run-codeception.sh run 'wpunit' 'WPGraphQLTest' --env docker
+   run-codeception.sh run 'functional' --env docker
+   run-codeception.sh run 'acceptance' --env docker   
+   ``` 
+Notes:
+* If you make a change that requires `composer install` to be rerun, shutdown the testing environment and restart it to 
+automatically rerun the `composer install` in the testing environment.
+* Leave the container shell (the second terminal window) by typing `exit`.
+* Shutdown the testing environment (the first terminal window) by typing `Ctrl + c` 
+* Docker artifacts will *usually* be cleaned up automatically when the script completes. In case it doesn't do the job,
+try these solutions:
+   * Run this command: `docker system prune`
+   * https://docs.docker.com/config/pruning/#prune-containers
 
 
+##### For Travis (or any other CI tool)
+* Run the tests in pristine Docker environments by running any of these commands: 
+   ```
+   ./run-docker-tests.sh wpunit
+   ./run-docker-tests.sh functional
+   ./run-docker-tests.sh acceptance
+   ```
 
+* Run the tests in pristine Docker environments with different configurations. Here are some examples: 
+   ```
+   env PHP_VERSION='7.1' ./run-docker-tests.sh wpunit
+   env PHP_VERSION='7.1' COVERAGE='true' ./run-docker-tests.sh functional
+   ```
+If `COVERAGE='true'` is set, results will appear in `docker-output/`.
+
+
+Notes:
+* Code coverage for `functional` and `acceptance` tests is only supported for PHP 7.X. 
+
+#### Running Wordpress + wp-graphql plugin with Docker
+1. Start a local instance of WordPress. This will run the instance in the foreground:
+   ```
+   ./run-docker-local-app.sh
+   ```
+1. Visit http://localhost:8000.
+   
+
+#### Updating WP Docker image
+Please make sure this file refers to the latest specific versions of WordPress and PHP that are available as a Docker
+image. These values will serve as default values if no environment variables have been explicitly set. 
+  ```
+  .env
+  ```
+Please avoid using the `latest` tag because the WP Docker image is published a few days after the PHP code
+is made available and that can result in inaccurate test results.
+  
 ### Generating Code Coverage
 You can generate code coverage for tests by passing `--coverage`, `--coverage-xml` or `--coverage-html` with the tests. 
 

@@ -18,7 +18,7 @@ class PostObjectQueriesTest extends \Codeception\TestCase\WPTestCase {
 			'role' => 'administrator',
 		] );
 
-		add_shortcode( 'wpgql_test_shortcode', function( $attrs, $content = null ) {
+		add_shortcode( 'wpgql_test_shortcode', function ( $attrs, $content = null ) {
 			global $post;
 			if ( 'post' !== $post->post_type ) {
 				return $content;
@@ -27,7 +27,7 @@ class PostObjectQueriesTest extends \Codeception\TestCase\WPTestCase {
 			return 'overridden content';
 		} );
 
-		add_shortcode( 'graphql_tests_basic_post_list', function( $atts ) {
+		add_shortcode( 'graphql_tests_basic_post_list', function ( $atts ) {
 			$query = '
 			query basicPostList($first:Int){
 				posts(first:$first){
@@ -237,6 +237,175 @@ class PostObjectQueriesTest extends \Codeception\TestCase\WPTestCase {
 			],
 		];
 
+		$this->assertEquals( $expected, $actual );
+	}
+
+	/**
+	 * testPostQueryWherePostDoesNotExist
+	 *
+	 * Tests a query for non existant post.
+	 *
+	 * @since 0.0.34
+	 */
+	public function testPostQueryWherePostDoesNotExist() {
+		/**
+		 * Create the global ID based on the plugin_type and the created $id
+		 */
+		$global_id = \GraphQLRelay\Relay::toGlobalId( 'post', 'doesNotExist' );
+
+		/**
+		 * Create the query string to pass to the $query
+		 */
+		$query = "
+ 		query {
+			post(id: \"{$global_id}\") {
+				slug
+			}
+		}";
+
+		/**
+		 * Run the GraphQL query
+		 */
+		$actual = do_graphql_request( $query );
+
+		/**
+		 * Establish the expectation for the output of the query
+		 */
+		$expected = [
+			'data'   => [
+				'post' => null,
+			],
+			'errors' => [
+				[
+					'message'   => 'No post was found with the ID: doesNotExist',
+					'locations' => [
+						[
+							'line'   => 3,
+							'column' => 4,
+						],
+					],
+					'path'      => [
+						'post',
+					],
+					'category'  => 'user',
+				],
+			],
+		];
+
+		$this->assertEquals( $expected, $actual );
+	}
+
+	/**
+	 * testPostQueryWithoutFeaturedImage
+	 *
+	 * This tests querying featuredImage on a post wihtout one.
+	 *
+	 * @since 0.0.34
+	 */
+	public function testPostQueryWithoutFeaturedImage() {
+		/**
+		 * Create Post
+		 */
+		$post_id = $this->createPostObject( [
+			'post_type' => 'post'
+		] );
+		/**
+		 * Create the global ID based on the post_type and the created $id
+		 */
+		$global_id = \GraphQLRelay\Relay::toGlobalId( 'post', $post_id );
+		$query     = "
+		query {
+			post(id: \"{$global_id}\") {
+				id
+				featuredImage {
+					altText
+					author {
+						id
+					}
+					caption
+					commentCount
+					commentStatus
+					comments {
+						edges {
+							node {
+								id
+							}
+						}
+					}
+					content
+					date
+					dateGmt
+					description
+					desiredSlug
+					editLast {
+						userId
+					}
+					editLock {
+						editTime
+					}
+					enclosure
+					excerpt
+					guid
+					id
+					link
+					mediaDetails {
+						file
+						height
+						meta {
+							aperture
+							credit
+							camera
+							caption
+							createdTimestamp
+							copyright
+							focalLength
+							iso
+							shutterSpeed
+							title
+							orientation
+							keywords
+						}
+						sizes {
+							name
+							file
+							width
+							height
+							mimeType
+							sourceUrl
+						}
+						width
+					}
+					mediaItemId
+					mediaType
+					menuOrder
+					mimeType
+					modified
+					modifiedGmt
+					parent {
+						...on Post {
+							id
+						}
+					}
+					pingStatus
+					slug
+					sourceUrl
+					status
+					title
+					toPing
+				}
+			}
+		}
+    ";
+
+		$actual   = do_graphql_request( $query );
+		$expected = [
+			"data" => [
+				"post" => [
+					"id"            => $global_id,
+					"featuredImage" => null
+				]
+			]
+		];
 		$this->assertEquals( $expected, $actual );
 	}
 
@@ -482,14 +651,14 @@ class PostObjectQueriesTest extends \Codeception\TestCase\WPTestCase {
 	public function testPostQueryWithTermFields() {
 
 		$post_title = uniqid();
-		$cat_name = uniqid();
-		$tag_name = uniqid();
+		$cat_name   = uniqid();
+		$tag_name   = uniqid();
 
 		/**
 		 * Create a post
 		 */
 		$post_id = $this->createPostObject( [
-			'post_type' => 'post',
+			'post_type'  => 'post',
 			'post_title' => $post_title
 		] );
 
@@ -570,8 +739,8 @@ class PostObjectQueriesTest extends \Codeception\TestCase\WPTestCase {
 		$this->assertTrue( in_array( $cat_name, $post['termNames'], true ) );
 
 		// tag and cat fields
-		$tag_names = wp_list_pluck( $post['tags'], 'name' );
-		$cat_names = wp_list_pluck( $post['cats'], 'name' );
+		$tag_names      = wp_list_pluck( $post['tags'], 'name' );
+		$cat_names      = wp_list_pluck( $post['cats'], 'name' );
 		$all_term_names = wp_list_pluck( $post['allTerms'], 'name' );
 
 		$this->assertTrue( in_array( $tag_name, $tag_names, true ) );
@@ -859,7 +1028,7 @@ class PostObjectQueriesTest extends \Codeception\TestCase\WPTestCase {
 		    ...pageData
 		  }
 		}
-		
+
 		fragment pageData on Page {
 		  __typename
 		  id
@@ -1104,7 +1273,7 @@ class PostObjectQueriesTest extends \Codeception\TestCase\WPTestCase {
 		 * Add a filter that will be called when the content field from the query
 		 * above is resolved.
 		 */
-		add_filter( 'the_content', function() use ( $graphql_query_post_id ) {
+		add_filter( 'the_content', function () use ( $graphql_query_post_id ) {
 			/**
 			 * Assert that post data was correctly set up.
 			 */
@@ -1283,10 +1452,11 @@ class PostObjectQueriesTest extends \Codeception\TestCase\WPTestCase {
 	/**
 	 * This was a use case presented as something that _could_ break things.
 	 *
-	 * A WPGraphQL Query could be used within a shortcode to populate the shortcode content. If the global $post was
-	 * set and _not_ reset, the content after the query would be broken.
+	 * A WPGraphQL Query could be used within a shortcode to populate the shortcode content. If the
+	 * global $post was set and _not_ reset, the content after the query would be broken.
 	 *
-	 * This simply ensures that the content before and after the shortcode are working as expected and that the global
+	 * This simply ensures that the content before and after the shortcode are working as expected
+	 * and that the global
 	 * $post is reset properly after a gql query is performed.
 	 */
 	public function testGraphQLQueryShortcodeInContent() {
