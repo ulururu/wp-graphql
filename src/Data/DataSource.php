@@ -871,6 +871,6 @@ class DataSource {
 	public static function get_registered_nav_menu_locations() {
 		global $_wp_registered_nav_menus;
 
-		return ! empty( $_wp_registered_nav_menus ) && is_array( $_wp_registered_nav_menus ) ? array_keys( $_wp_registered_nav_menus ) : [];
+		return ! empty( $_wp_registered_nav_menus ) && is_array( $_wp_registered_nav_menus ) ? array_values( $_wp_registered_nav_menus ) : [];
 	}
 }
