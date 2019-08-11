@@ -5,7 +5,7 @@ use WPGraphQL\Types;
 
 $possible_types = [];
 
-$allowed_taxonomies = \WPGraphQL::$allowed_taxonomies;
+$allowed_taxonomies = \WPGraphQL::get_allowed_taxonomies();
 if ( ! empty( $allowed_taxonomies ) && is_array( $allowed_taxonomies ) ) {
 	foreach ( $allowed_taxonomies as $allowed_taxonomy ) {
 		if ( empty( $possible_types[ $allowed_taxonomy ] ) ) {
@@ -14,9 +14,12 @@ if ( ! empty( $allowed_taxonomies ) && is_array( $allowed_taxonomies ) ) {
 	}
 }
 
-register_graphql_union_type( 'TermObjectUnion', [
-	'types'       => $possible_types,
-	'resolveType' => function ( $value ) {
-		return ! empty( $value->taxonomy ) ? Types::term_object( $value->taxonomy ) : null;
-	},
-] );
+register_graphql_union_type(
+	'TermObjectUnion',
+	[
+		'types'       => $possible_types,
+		'resolveType' => function ( $value ) {
+			return ! empty( $value->taxonomyName ) ? Types::term_object( $value->taxonomyName ) : null;
+		},
+	]
+);

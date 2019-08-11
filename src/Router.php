@@ -197,14 +197,18 @@ class Router {
 		 *
 		 * @param array $access_control_headers Array of headers to allow.
 		 */
-		$access_control_allow_headers = apply_filters( 'graphql_access_control_allow_headers', [
-			'Authorization',
-			'Content-Type'
-		] );
+		$access_control_allow_headers = apply_filters(
+			'graphql_access_control_allow_headers',
+			[
+				'Authorization',
+				'Content-Type',
+			]
+		);
 
 		$headers = [
 			'Access-Control-Allow-Origin'  => '*',
 			'Access-Control-Allow-Headers' => implode( ', ', $access_control_allow_headers ),
+			'Access-Control-Max-Age'       => 600, // cache the result of preflight requests (600 is the upper limit for Chromium)
 			'Content-Type'                 => 'application/json ; charset=' . get_option( 'blog_charset' ),
 			'X-Robots-Tag'                 => 'noindex',
 			'X-Content-Type-Options'       => 'nosniff',
@@ -327,19 +331,20 @@ class Router {
 			exit;
 		}
 
-		$query           = '';
-		$operation_name  = '';
-		$variables       = [];
+		$query          = '';
+		$operation_name = '';
+		$variables      = [];
 
 		try {
-			$request = new Request();
+			$request  = new Request();
 			$response = $request->execute_http();
 
 			// Get the operation params from the request.
-			$params = $request->get_params();
-			$query = $params->query;
-			$operation_name = $params->operation;
-			$variables = $params->variables;
+			$params         = $request->get_params();
+			$query          = isset( $params->query ) ? $params->query : '';
+			$operation_name = isset( $params->operation ) ? $params->operation : '';
+			$variables      = isset( $params->variables ) ? $params->variables : null;
+
 		} catch ( \Exception $error ) {
 
 			/**
